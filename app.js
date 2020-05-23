@@ -5,6 +5,7 @@ const bodyParser = require("body-parser")
 const mongoose = require('mongoose')
 const app = express()
 const admin = require('./routers/admin')
+const usuarios = require('./routers/usuario')
 const path = require("path")
 const session = require("express-session")
 const flash = require("connect-flash")
@@ -12,6 +13,10 @@ require("./models/Postagem")
 const Postagem = mongoose.model("postagens")
 require("./models/Categoria")
 const Categoria = mongoose.model("categorias")
+const passport = require('passport')
+require("./config/auth")(passport)
+const db = require("./config/db")
+
 //Configurações
 //Sessão
 app.use(session({
@@ -19,11 +24,15 @@ app.use(session({
     resave: true,
     saveUninitialized: true
 }))
+app.use(passport.initialize())
+app.use(passport.session())
 app.use(flash())
 //Middleware
 app.use((req, res, next) => {
     res.locals.success_msg = req.flash("success_msg")
     res.locals.error_msg = req.flash("error_msg")
+    res.locals.error = req.flash("error")
+    res.locals.user = req.user || null;
     next()
 })
 //Body Parser
@@ -33,7 +42,7 @@ app.use(bodyParser.json())
 app.engine('handlebars', handlebars({ defaultLayout: 'main' }))
 app.set('view engine', 'handlebars')
 //Mongoose
-mongoose.connect("mongodb://localhost/blogapp").then(() => {
+mongoose.connect(db.mongoURI).then(() => {
     console.log("Conectado ao mongo")
 }).catch((err) => {
     console.log("Erro ao se conectar: " + err)
@@ -177,12 +186,13 @@ app.get('/posts', (req, res) => {
 
 
 app.use('/admin', admin)
+app.use('/usuarios', usuarios)
 
 
 //Outros
 
-const PORT = 8082
+const port = process.env.PORT || 8082
 
-app.listen(PORT, () => {
+app.listen(port, () => {
     console.log("Servidor rodando! ")
 })
